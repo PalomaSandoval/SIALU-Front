@@ -1,0 +1,11 @@
+.administration-page{padding:32px;color:var(--palette-text);font:14px var(--font-body)}
+.administration-page header,.administration-page footer{display:flex;justify-content:space-between;align-items:center;gap:16px}
+.administration-page button{padding:10px 16px;border:1px solid var(--palette-editorialControlBorder);border-radius:8px;background:var(--palette-white);color:inherit;font:inherit;cursor:pointer}
+.administration-page button:disabled{opacity:.5;cursor:default}
+.administration-page dialog{width:560px;max-width:calc(100vw - 32px);max-height:85vh;border:1px solid var(--palette-editorialControlBorder);border-radius:12px;padding:24px;color:inherit;background:var(--palette-white)}
+.administration-page dialog::backdrop{background:#0005}
+.administration-page fieldset{border:0;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:16px}
+.administration-page label{display:grid;gap:6px}
+.administration-page input,.administration-page select{box-sizing:border-box;width:100%;font:inherit;padding:10px;border:1px solid var(--palette-editorialControlBorder);border-radius:6px;background:var(--palette-white);color:inherit}
+.administration-page footer{margin-top:24px;justify-content:flex-end}
+.administration-page [role=alert]{color:var(--palette-errorText)}
