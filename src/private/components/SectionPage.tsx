@@ -13,7 +13,7 @@ export default function SectionPage({ title, section }: { title: string; section
   return <>
     <nav className="section-breadcrumb" aria-label="Ubicación">{section || 'Inicio'} / <span aria-current="page">{title}</span></nav>
     <header className="section-heading"><div><h1>{title}</h1><p>{description}</p></div></header>
-    <section className="section-placeholder"><h2>{title === 'Dashboard' ? 'Resumen general' : title}</h2><p>{title === 'Fuentes de datos' && section === 'Administración'
+    <section className="section-placeholder"><h2>{title === 'Monitoreo' ? 'Resumen general' : title}</h2><p>{title === 'Fuentes de datos' && section === 'Administración'
       ? 'Aquí se integrará el listado de fuentes y las acciones para agregar, editar, activar y desactivar.'
       : 'Sección preparada para integrar su contenido.'}</p></section>
   </>;

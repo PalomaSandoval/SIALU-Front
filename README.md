@@ -31,7 +31,7 @@ Ejemplo para consumir otro endpoint:
 
 ```js
 import { request } from './services/api.ts';
-const { data } = await request('/catalogos/coordinaciones');
+const { data } = await request('/catalogos/campus');
 ```
 
 Las rutas protegidas requieren iniciar sesión con una cuenta institucional y los permisos correspondientes. La pantalla muestra el JSON de `/me` para comprobar la sesión.

@@ -1,26 +1,26 @@
 import { useEffect, useRef } from 'react';
 import type React from 'react';
 import { X } from 'lucide-react';
-import type { Level, LevelKind } from '../types.ts';
+import type { Level } from '../useLevels.ts';
 
 interface Props {
-  kind: LevelKind; draft: Level | null; busy: boolean; error: string;
+  draft: Level | null; busy: boolean; error: string;
   onChange: React.Dispatch<React.SetStateAction<Level | null>>;
   onSave: (event: React.SubmitEvent<HTMLFormElement>) => Promise<void>;
 }
-export default function LevelForm({ kind, draft, busy, error, onChange, onSave }: Props) {
+export default function LevelForm({ draft, busy, error, onChange, onSave }: Props) {
   const dialog = useRef<HTMLDialogElement>(null);
   const open = draft !== null;
   useEffect(() => { if (open) dialog.current?.showModal(); else dialog.current?.close(); }, [open]);
   return <><style>{styles}</style><dialog ref={dialog} className="level-form" aria-labelledby="level-form-title"
     onCancel={event => { if (busy) event.preventDefault(); else onChange(null); }}>
     {draft && <form onSubmit={onSave}>
-      <header><h2 id="level-form-title">{draft.id ? `Editar nivel de ${kind}` : `Agregar nivel de ${kind}`}</h2>
+      <header><h2 id="level-form-title">Editar nivel de severidad</h2>
         <button type="button" disabled={busy} aria-label="Cerrar formulario" onClick={() => onChange(null)}><X size={18} /></button></header>
       <fieldset disabled={busy}>
         <label>Nombre *<input autoFocus required maxLength={50} value={draft.nombre} onChange={event => onChange({ ...draft, nombre: event.target.value })} /></label>
         <label>Descripción<textarea maxLength={300} rows={4} value={draft.descripcion} onChange={event => onChange({ ...draft, descripcion: event.target.value })} /></label>
-        <label>Nivel *<input required type="number" min={0} max={255} step={1}  aria-describedby="level-input-help" value={draft.nivel} onChange={event => onChange({ ...draft, nivel: event.target.value })} /><span id="level-input-help" className="level-range">Valor entero entre 0 y 255. El orden representa la gravedad o importancia.</span></label>
+        <label>Nivel<input type="number" readOnly value={draft.nivel} /><span className="level-range">El número de nivel es fijo.</span></label>
         {error && <p className="level-form-error" role="alert">{error}</p>}
       </fieldset>
       <footer><button className="level-button" type="button" disabled={busy} onClick={() => onChange(null)}>Cancelar</button>

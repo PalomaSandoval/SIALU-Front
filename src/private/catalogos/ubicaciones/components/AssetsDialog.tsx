@@ -24,7 +24,7 @@ export default function AssetsDialog({ inspection, overview, onClose }: Props) {
     return () => controller.abort();
   }, [query, revision]);
   return <><style>{styles}</style><dialog ref={dialog} className="location-assets" aria-labelledby="location-assets-title" onCancel={onClose}>
-    <header><div><h2 id="location-assets-title">{inspection.title}</h2><p>Clasificaciones asignadas a cada equipo. Esta vista es de consulta.</p></div>
+    <header><div><h2 id="location-assets-title">{inspection.title}</h2><p>Clasificaciones asignadas a cada equipo.</p></div>
       <button type="button" aria-label="Cerrar equipos asociados" onClick={onClose}><X size={19} /></button></header>
     <div className="location-assets-body">
       <div className="location-asset-filters">

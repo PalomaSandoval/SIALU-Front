@@ -29,15 +29,10 @@ export default function AdministrationMain({ kind }: { kind: AdminKind }) {
       needs.has('roles') ? list('tipos-usuarios', controller.signal) : Promise.resolve([]),
       needs.has('permisos') ? list('permisos', controller.signal) : Promise.resolve([]),
       needs.has('areas') ? request<{ data: Option[] }>('/catalogos/areas', { signal: controller.signal }) : Promise.resolve({ data: [] }),
-      needs.has('contextos') ? request<{ data: Option[] }>('/catalogos/contextos-red', { signal: controller.signal }) : Promise.resolve({ data: [] }),
-      needs.has('activos') ? request<{ data: Option[] }>('/catalogos/ubicaciones/activos', { signal: controller.signal }) : Promise.resolve({ data: [] }),
-      needs.has('grupos') ? request<{ data: Option[] }>('/catalogos/grupos-infraestructura', { signal: controller.signal }) : Promise.resolve({ data: [] }),
-      needs.has('interfaces') ? request<{ data: Option[] }>('/catalogos/interfaces', { signal: controller.signal }) : Promise.resolve({ data: [] }),
-      needs.has('fuentes') ? request<{ data: Option[] }>('/catalogos/fuentes', { signal: controller.signal }) : Promise.resolve({ data: [] }),
-    ]).then(([rows, roles, permissions, areas, contexts, assets, groups, interfaces, sources]) => {
+    ]).then(([rows, roles, permissions, areas]) => {
       if (controller.signal.aborted) return;
       setItems(rows); setOptions({ roles: roles.map(r => ({ id: r.id, nombre: String(r.descripcion), vigente: r.vigente })),
-        permisos: permissions.map(r => ({ id: r.id, nombre: String(r.clave), vigente: r.vigente })), areas: areas.data, contextos: contexts.data, activos: assets.data, grupos: groups.data, interfaces: interfaces.data, fuentes: sources.data });
+        permisos: permissions.map(r => ({ id: r.id, nombre: String(r.clave), vigente: r.vigente })), areas: areas.data });
     }).catch(e => { if (!controller.signal.aborted) setError(e instanceof Error ? e.message : 'No se pudo cargar.'); })
       .finally(() => { if (!controller.signal.aborted) setLoading(false); });
     return () => controller.abort();
@@ -63,18 +58,30 @@ export default function AdministrationMain({ kind }: { kind: AdminKind }) {
     catch(e) { setError(e instanceof Error ? e.message : 'No se pudo actualizar.'); }
     finally { setBusy(false); }
   }
-  const title = (r: Row) => String(kind === 'interfaces' ? r.nombre : (kind === 'identificadores-interfaz' || kind === 'identificadores-activo') ? `${r.tipo}: ${r.valor}` : kind === 'grupos-activos' ? `${options.activos?.find(o=>o.id===Number(r.activo_id))?.nombre ?? r.activo_id} · ${options.grupos?.find(o=>o.id===Number(r.grupo_id))?.nombre ?? r.grupo_id}` : (kind === 'contextos-red' || kind === 'grupos-infraestructura') ? r.nombre : kind === 'asignaciones-ip' ? r.ip : kind === 'contextos-fuente' ? `${r.serial} / ${r.vsys} / ${r.zona}` : kind === 'usuarios' ? r.uid : kind === 'permisos' ? r.clave : kind === 'tipos-usuarios-permisos' ? `${r.rol} · ${r.permiso}` : r.descripcion);
-  return <section className="administration-page"><header><h1>{definition.title}</h1><button disabled={loading || busy || !!error} onClick={() => edit()}>Agregar registro</button></header>
-    {kind === 'asignaciones-ip' && <p>Las horas se registran en UTC. Para cambiar de equipo, cierra la asignación y crea otra. Las IP sin contexto requieren conciliación antes de asociar eventos.</p>}
+  const title = (r: Row) => {
+    if (kind === 'tipos-usuarios-permisos') {
+      return `${String(r.rol ?? '')} · ${String(r.permiso ?? '')}`;
+    }
+    return String(kind === 'usuarios' ? r.uid : kind === 'permisos' ? r.clave : r.descripcion);
+  };
+  const subtitle = (r: Row) => kind === 'usuarios'
+    ? [r.nombre, r.primer_apellido, r.segundo_apellido].filter(value => typeof value === 'string' && value.trim()).join(' ')
+    : kind === 'tipos-usuarios-permisos' ? '' : String(r.descripcion ?? '');
+  return <section className={`administration-page administration-page--catalog-styled${kind === 'tipos-usuarios-permisos' ? ' administration-page--role-permissions' : ''}`}><header><h1>{definition.title}</h1><button disabled={loading || busy || !!error} onClick={() => edit()}>Agregar registro</button></header>
     {notice && <p role="status">{notice}</p>}
     <CatalogList items={items} loading={loading} busy={busy} error={error} onRetry={() => setRevision(r => r + 1)} getKey={r => r.id} getTitle={title}
-      getSubtitle={r => String(kind === 'usuarios' ? `${r.nombre} ${r.primer_apellido}` : r.descripcion ?? '')} isActive={r => r.vigente} onEdit={edit} onToggle={['contextos-red','contextos-fuente','asignaciones-ip','grupos-infraestructura','grupos-activos','interfaces','identificadores-interfaz','identificadores-activo'].includes(kind) ? undefined : changeState} />
+      getSubtitle={subtitle} getSearchText={kind === 'tipos-usuarios-permisos' ? r => `${r.rol} ${r.permiso} ${r.descripcion_permiso}` : undefined}
+      details={kind === 'tipos-usuarios-permisos' ? [
+        { key: 'rol', label: 'Rol', value: r => String(r.rol ?? '') },
+        { key: 'permiso', label: 'Permiso', value: r => String(r.permiso ?? '') },
+      ] : []}
+      isActive={r => r.vigente} onEdit={edit} onToggle={changeState} />
     <dialog ref={dialog} onCancel={e => { if (busy) e.preventDefault(); else setDraft(null); }} aria-labelledby="admin-form-title">
       {draft && <form onSubmit={submit}><h2 id="admin-form-title">{draft.id ? 'Editar registro' : 'Agregar registro'}</h2><fieldset disabled={busy}>
         {definition.fields.map(field => <label key={field.key}>{field.label}{!field.optional && ' *'}
           {field.options ? <select required={!field.optional} value={String(draft[field.key] ?? '')} onChange={e => setDraft({ ...draft, [field.key]: e.target.value })}>
             <option value="">Selecciona</option>{(options[field.options] ?? []).filter(o => o.vigente || o.id === Number(draft[field.key])).map(o => <option key={o.id} value={o.id}>{o.nombre}{!o.vigente && ' (inactivo)'}</option>)}
-          </select> : <input required={!field.optional} step={field.type === 'datetime-local' ? '0.001' : undefined} type={field.type ?? 'text'} min={field.key === 'extension' ? 0 : 1} max={field.type === 'number' ? 2147483647 : undefined} maxLength={field.max} value={String(draft[field.key] ?? '')} onChange={e => setDraft({ ...draft, [field.key]: e.target.value })} />}
+          </select> : <input required={!field.optional} type={field.type ?? 'text'} min={field.key === 'extension' ? 0 : 1} max={field.type === 'number' ? 2147483647 : undefined} maxLength={field.max} value={String(draft[field.key] ?? '')} onChange={e => setDraft({ ...draft, [field.key]: e.target.value })} />}
         </label>)}
       </fieldset>{formError && <p role="alert">{formError}</p>}<footer><button type="button" disabled={busy} onClick={() => setDraft(null)}>Cancelar</button><button disabled={busy}>{busy ? 'Guardando…' : 'Guardar'}</button></footer></form>}
     </dialog>

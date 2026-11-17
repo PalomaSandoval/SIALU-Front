@@ -18,6 +18,7 @@ export interface CatalogListProps<T> {
   getKey: (item: T) => Key;
   getTitle: (item: T) => string;
   getSubtitle?: (item: T) => string;
+  getImageUrl?: (item: T) => string | null | undefined;
   getSearchText?: (item: T) => string;
   isActive?: (item: T) => boolean;
   details?: readonly CatalogDetail<T>[];
@@ -29,11 +30,12 @@ export interface CatalogListProps<T> {
   onClearFilters?: () => void;
   onRetry?: () => void;
   onEdit?: (item: T) => void;
+  canToggle?: (item: T) => boolean;
   // Confirmation and persistence belong to the calling catalog.
   onToggle?: (item: T) => void | Promise<void>;
 }
 export interface CatalogRowView {
-  key: Key; title: string; subtitle?: string; active?: boolean;
+  key: Key; title: string; subtitle?: string; imageUrl?: string | null; active?: boolean;
   details: { key: string; label: string; value: ReactNode }[];
   onEdit?: () => void; onToggle?: () => void;
   actions?: { key: string; label: string; icon: ReactNode; onClick: () => void }[];

@@ -1,0 +1,24 @@
+.orion-node-availability>header{max-width:860px}
+.orion-node-search{max-width:640px;margin:28px 0 20px}
+.orion-node-search>label{display:block}
+.orion-node-matches{list-style:none;margin:8px 0 0;padding:4px;max-height:320px;overflow:auto;border:1px solid var(--palette-editorialBorder);border-radius:8px;background:var(--palette-white)}
+.orion-node-matches li+li{border-top:1px solid var(--palette-editorialBorder)}
+.network-admin .orion-node-matches button{display:flex;justify-content:space-between;gap:16px;width:100%;padding:10px 12px;border:0;border-radius:6px;text-align:left;background:transparent}
+.network-admin .orion-node-matches button:hover{background:var(--palette-editorialSurface)}
+.orion-node-matches button strong{font-weight:500;overflow-wrap:anywhere}
+.orion-node-matches button span{flex:none;color:var(--palette-editorialMuted)}
+.orion-node-empty{padding:10px 12px;color:var(--palette-editorialMuted)}
+.orion-node-selected{display:flex;align-items:center;flex-wrap:wrap;gap:20px;max-width:640px;padding:16px 18px;border:1px solid var(--palette-editorialBorder);border-radius:10px;background:var(--palette-white)}
+.orion-node-selected>div{flex:1;min-width:200px}
+.orion-node-selected>div>span{display:block;color:var(--palette-editorialMuted);margin-bottom:4px}
+.orion-node-selected strong{font-size:15px;font-weight:600;overflow-wrap:anywhere}
+.orion-node-selected strong.is-empty{font-weight:400;color:var(--palette-editorialMuted)}
+.orion-node-selected strong small{display:inline;margin-left:8px;font-weight:400}
+.network-admin .orion-node-selected button{font-weight:600}
+.orion-node-message{margin:16px 0}
+.network-admin .orion-node-message p{color:var(--palette-errorText);margin:0 0 8px}
+.orion-node-result{margin-top:32px;max-width:860px}
+.private-content .orion-node-result h2{font-size:18px;font-weight:600;margin:0 0 4px;overflow-wrap:anywhere}
+.orion-node-result header p{margin:0 0 8px}
+.network-table td.orion-node-percent{font-variant-numeric:tabular-nums;font-weight:600}
+.network-admin .orion-node-note{color:var(--palette-errorText)}

@@ -7,7 +7,7 @@ interface Props {
 }
 export default function LocationsHeader({ data, onInspect }: Props) {
   return <><style>{styles}</style>
-    <header className="location-heading"><div><h1>Ubicaciones y dependencias</h1><p>Consulta áreas organizativas, unidades y agrupaciones de origen asociadas a los equipos.</p></div></header>
+    <header className="location-heading"><div><h1>Ubicaciones y dependencias</h1><p>Consulta áreas organizativas y agrupaciones de origen asociadas a los equipos.</p></div></header>
     <div className="location-summary" aria-label="Clasificación de equipos">
       <button disabled={!data} onClick={() => onInspect('Todos los equipos', {})}><Monitor size={17} /><strong>{data?.resumen.equipos ?? '—'}</strong> equipos</button>
       <button disabled={!data} onClick={() => onInspect('Equipos sin ubicación', { pendiente: 'campus' })}><strong>{data?.resumen.sin_campus ?? '—'}</strong> sin ubicación</button>

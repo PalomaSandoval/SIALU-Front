@@ -22,7 +22,10 @@ export default function CatalogRows({ items, busy, total, pages, current, labels
   return <><style>{styles}</style>
     {columnTitle && <div className="catalog-column-headings" aria-hidden="true"><span>{columnTitle}</span><div>{columnLabels?.map(label => <span key={label}>{label}</span>)}</div><span /></div>}
     <div>{items.map((item, index) => <article className="catalog-row" key={item.key} aria-labelledby={`${id}-${index}`}>
-      <div className="catalog-item-name"><h2 id={`${id}-${index}`}>{item.title}</h2>{item.subtitle && <p>{item.subtitle}</p>}</div>
+      <div className={`catalog-item-name${item.imageUrl ? ' catalog-item-name-with-image' : ''}`}>
+        {item.imageUrl && <img className="catalog-item-image" src={item.imageUrl} alt="" loading="lazy" />}
+        <div><h2 id={`${id}-${index}`}>{item.title}</h2>{item.subtitle && <p>{item.subtitle}</p>}</div>
+      </div>
       {item.details.length > 0 && <dl className="catalog-item-details">{item.details.map(detail => <div key={detail.key}><dt>{detail.label}</dt><dd>{detail.value}</dd></div>)}</dl>}
       {(item.active !== undefined || item.onEdit || item.onToggle || !!item.actions?.length) && <div className="catalog-row-end">
         {item.active !== undefined && <span className={`catalog-state ${item.active ? 'active' : ''}`}><span aria-hidden="true" />{item.active ? labels.activeState : labels.inactiveState}</span>}
@@ -49,6 +52,9 @@ const styles = `
 .catalog-button:hover,.catalog-icon-button:hover{background:var(--palette-noticeSurface)}
 .catalog-row{display:flex;flex-wrap:wrap;align-items:flex-start;gap:20px 32px;padding:24px 0;border-bottom:1px solid var(--palette-editorialBorder)}
 .catalog-item-name{flex:1 1 280px;min-width:0}
+.catalog-item-name-with-image{display:flex;align-items:center;gap:18px}
+.catalog-item-name-with-image>div{min-width:0}
+.catalog-item-image{display:block;width:68px;height:68px;flex:none;object-fit:contain;border:1px solid var(--palette-editorialBorder);border-radius:20px;background:var(--palette-white)}
 .catalog-item-name h2{font-size:17px;font-weight:700;letter-spacing:-.015em;line-height:1.25;margin:0 0 12px;overflow-wrap:anywhere}
 .catalog-item-name p{font-size:12px;line-height:1.6;color:var(--palette-muted);margin:0;overflow-wrap:anywhere}
 .catalog-item-details{flex:1 1 280px;min-width:0;display:grid;grid-template-columns:minmax(80px,.65fr) minmax(0,1.35fr);gap:24px;margin:0}

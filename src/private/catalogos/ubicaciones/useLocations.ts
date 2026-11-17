@@ -30,25 +30,25 @@ export default function useLocations(kind: LocationKind) {
     return () => controller.abort();
   }, [revision]);
 
-  function open(entry?: LocationEntry) {
+  function open(entry: LocationEntry) {
     setFormError('');
-    setDraft(entry ? { ...entry } : { id: 0, nombre: '', descripcion: '', vigente: true, equipos: 0, equipos_activos: 0, usuarios_activos: 0, redes_activas: 0 });
+    setDraft({ ...entry });
   }
   function inspect(entry: LocationEntry) {
-    const key = ({ areas: 'area', campus: 'campus', 'unidades-institucionales': 'unidad' } as const)[kind];
+    const key = ({ areas: 'area', campus: 'campus' } as const)[kind];
     setInspection({ title: `Equipos de ${entry.nombre}`, filters: { [key]: String(entry.id) } });
   }
   async function save(event: React.SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!draft || busy) return;
     if (!draft.nombre.trim()) { setFormError('Escribe un nombre.'); return; }
-    if (draft.id && !await confirmEdit(draft.nombre)) return;
+    if (!await confirmEdit(draft.nombre)) return;
     setBusy(true); setFormError('');
     try {
-      await request(`/catalogos/${kind}${draft.id ? `/${draft.id}` : ''}`, {
-        method: draft.id ? 'PUT' : 'POST', body: { nombre: draft.nombre.trim(), descripcion: draft.descripcion.trim() || null, vigente: draft.vigente },
+      await request(`/catalogos/${kind}/${draft.id}`, {
+        method: 'PUT', body: { nombre: draft.nombre.trim(), descripcion: draft.descripcion.trim() || null, vigente: draft.vigente },
       });
-      setNotice(`${draft.nombre}: ${draft.id ? 'cambios guardados' : 'registro agregado'}.`);
+      setNotice(`${draft.nombre}: cambios guardados.`);
       setDraft(null); setRevision(value => value + 1);
     } catch (error) { setFormError(error instanceof Error ? error.message : 'No se pudo guardar el registro.'); }
     finally { setBusy(false); }
@@ -57,9 +57,9 @@ export default function useLocations(kind: LocationKind) {
     if (busy) return;
     setActionError('');
     if (entry.vigente) {
-      const reasons = [[entry.equipos_activos, 'equipos activos'], [entry.usuarios_activos, 'usuarios activos'], [entry.redes_activas, 'redes activas']]
+      const reasons = [[entry.equipos_activos, 'equipos activos'], [entry.usuarios_activos, 'usuarios activos']]
         .filter(([count]) => Number(count) > 0).map(([count, label]) => `${count} ${label}`);
-      if (reasons.length) { setActionError(`No se puede desactivar «${entry.nombre}»: tiene ${reasons.join(', ')}. Reasigna o desactiva esos registros primero.`); return; }
+      if (reasons.length) { setActionError(`No se puede desactivar «${entry.nombre}»: tiene ${reasons.join(', ')}. `); return; }
       if (!await confirm({ title: `¿Desactivar ${locationDefinitions[kind].singular}?`, description: `«${entry.nombre}» dejará de estar disponible para nuevas asignaciones. Se conservará su historial.`, confirmLabel: 'Desactivar', tone: 'danger' })) return;
     }
     setBusy(true);

@@ -1,12 +1,6 @@
-import { Plus } from 'lucide-react';
-
-interface Props { disabled: boolean; onAdd: () => void }
-export default function FuentesHeader({ disabled, onAdd }: Props) {
+export default function FuentesHeader() {
   return <><style>{styles}</style><header className="fu-heading">
-    <div><h1>Fuentes de datos</h1><p>Registrar una fuente no configura ni activa una conexión. Consulta el estado de Orion y Palo Alto en Servicios; sus credenciales se configuran en el servidor.</p></div>
-    <button className="fu-button fu-primary" disabled={disabled} onClick={onAdd}>
-      <Plus size={18} aria-hidden="true" />Agregar fuente
-    </button>
+    <div><h1>Fuentes de datos</h1><p>Fuentes que administra SIALU</p></div>
   </header></>;
 }
 

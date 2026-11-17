@@ -8,13 +8,13 @@ export default function FuentesMain() {
   const fuentes = useFuentes();
   return <div className="fu-page">
     <style>{styles}</style>
-    <FuentesHeader disabled={fuentes.loading || fuentes.busy || !!fuentes.loadError} onAdd={() => fuentes.open()} />
+    <FuentesHeader />
     {fuentes.notice && <div className="fu-notice" role="status">
       {fuentes.notice}<button aria-label="Cerrar aviso" onClick={() => fuentes.setNotice('')}><X size={18} aria-hidden="true" /></button>
     </div>}
     <FuentesList items={fuentes.rows} loading={fuentes.loading} busy={fuentes.busy} error={fuentes.loadError}
       onRetry={fuentes.retry} onEdit={fuentes.open} onToggle={fuentes.toggle} />
-    <FuenteForm draft={fuentes.draft} busy={fuentes.busy} error={fuentes.error} setDraft={fuentes.setDraft} onSave={fuentes.save} />
+    <FuenteForm draft={fuentes.draft} busy={fuentes.busy} error={fuentes.error} setDraft={fuentes.setDraft} onSave={fuentes.save} onUploadIcon={fuentes.uploadIcon} />
   </div>;
 }
 

@@ -16,7 +16,7 @@ export default function LocationForm({ kind, draft, busy, error, onChange, onSav
   return <><style>{styles}</style><dialog ref={dialog} className="location-form" aria-labelledby="location-form-title"
     onCancel={event => { if (busy) event.preventDefault(); else onChange(null); }}>
     {draft && <form onSubmit={onSave}>
-      <header><h2 id="location-form-title">{draft.id ? `Editar ${locationDefinitions[kind].singular}` : locationDefinitions[kind].add}</h2>
+      <header><h2 id="location-form-title">Editar {locationDefinitions[kind].singular}</h2>
         <button type="button" disabled={busy} aria-label="Cerrar formulario" onClick={() => onChange(null)}><X size={18} /></button></header>
       <fieldset disabled={busy}>
         <label>Nombre *<input autoFocus required maxLength={150} value={draft.nombre} onChange={event => onChange({ ...draft, nombre: event.target.value })} /></label>

@@ -62,7 +62,14 @@ const colors = {
   "tooltipShadow": "rgba(0,0,0,.1)",
   "focusHalo": "rgba(139, 5, 125, .05)",
   "buttonHover": "#8b057e7e",
-  "buttonText": "#ffffff"
+  "buttonText": "#ffffff",
+  "severityCritical": "#A61B1B",
+  "severityHigh": "#E8590C",
+  "severityMedium": "#D9A700",
+  "severityLow": "#2563EB",
+  "severityInformational": "#16A34A",
+  "severityUnclassified": "#98A2B3",
+  "chartTrack": "#EFF1F4"
 } as const;
 
 const fonts = {

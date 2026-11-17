@@ -11,7 +11,7 @@ import AssetsDialog from './components/AssetsDialog.tsx';
 export default function LocationsMain() {
   const [params, setParams] = useSearchParams();
   const candidate = params.get('seccion');
-  const kind: LocationKind = candidate === 'campus' || candidate === 'unidades-institucionales' ? candidate : 'areas';
+  const kind: LocationKind = candidate === 'campus' ? candidate : 'areas';
   const definition = locationDefinitions[kind];
   const locations = useLocations(kind);
   return <div className="locations-page"><style>{styles}</style>
@@ -21,7 +21,6 @@ export default function LocationsMain() {
       {(Object.keys(locationDefinitions) as LocationKind[]).map(value => <button key={value} disabled={locations.busy} aria-pressed={kind === value}
         onClick={() => { setParams({ seccion: value }); locations.setActionError(''); locations.setNotice(''); }}>{locationDefinitions[value].title}</button>)}
     </div>
-    <button className="location-button primary" disabled={locations.loading || locations.busy || !!locations.error} onClick={() => locations.open()}>{definition.add}</button>
     <p className="location-description">{definition.description}</p>
     {locations.notice && <div className="location-notice" role="status">{locations.notice}<button aria-label="Cerrar aviso" onClick={() => locations.setNotice('')}><X size={17} /></button></div>}
     {locations.actionError && <p className="location-error" role="alert">{locations.actionError}</p>}

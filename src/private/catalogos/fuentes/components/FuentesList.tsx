@@ -9,8 +9,10 @@ export default function FuentesList(props: Props) {
   return <CatalogList {...props}
     getKey={item => item.id} getTitle={item => item.nombre}
     getSubtitle={item => item.fabricante || 'Sin fabricante'}
+    getImageUrl={item => item.icono_url}
     getSearchText={item => `${item.nombre} ${item.fabricante}`}
     isActive={item => item.vigente}
+    canToggle={item => !item.integracion_configurada || !item.vigente}
     details={[
       { key: 'metodo', label: 'Integración', value: item => item.metodo },
       { key: 'zona', label: 'Zona horaria', value: item => item.zona },

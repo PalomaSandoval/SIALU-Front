@@ -10,9 +10,9 @@ const defaults: CatalogLabels = {
   empty: 'No hay registros que coincidan', search: 'Buscar registros',
 };
 
-export default function CatalogList<T>({ items, getKey, getTitle, getSubtitle, getSearchText,
+export default function CatalogList<T>({ items, getKey, getTitle, getSubtitle, getImageUrl, getSearchText,
   isActive, details = [], actions = [], loading = false, busy = false, error = '', pageSize = 8,
-  labels: customLabels, columnTitle, editLabel, onClearFilters, onRetry, onEdit, onToggle }: CatalogListProps<T>) {
+  labels: customLabels, columnTitle, editLabel, onClearFilters, onRetry, onEdit, onToggle, canToggle }: CatalogListProps<T>) {
   const labels = { ...defaults, ...customLabels };
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState<CatalogStatus>('all');
@@ -36,10 +36,10 @@ export default function CatalogList<T>({ items, getKey, getTitle, getSubtitle, g
       {onRetry && <button disabled={busy || loading} onClick={onRetry}>Reintentar</button>}
     </div>}
     {loading ? <CatalogSkeleton /> : !error && <CatalogRows
-      items={visible.map(item => ({ key: getKey(item), title: getTitle(item), subtitle: getSubtitle?.(item), active: isActive?.(item),
+      items={visible.map(item => ({ key: getKey(item), title: getTitle(item), subtitle: getSubtitle?.(item), imageUrl: getImageUrl?.(item), active: isActive?.(item),
         details: details.map(detail => ({ key: detail.key, label: detail.label, value: detail.value(item) })),
         actions: actions.map(action => ({ key: action.key, label: action.label, icon: action.icon, onClick: () => action.onClick(item) })),
-        onEdit: onEdit ? () => onEdit(item) : undefined, onToggle: onToggle ? () => { void onToggle(item); } : undefined }))}
+        onEdit: onEdit ? () => onEdit(item) : undefined, onToggle: onToggle && (canToggle?.(item) ?? true) ? () => { void onToggle(item); } : undefined }))}
       columnTitle={columnTitle} columnLabels={details.map(detail => detail.label)} editLabel={editLabel}
       busy={busy} total={filtered.length} pages={pages} current={current} labels={labels} onPage={setPage} onClear={clear} />}
   </section>;

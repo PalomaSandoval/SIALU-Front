@@ -21,8 +21,8 @@ export async function request<T = unknown>(path: string, { method = 'GET', body,
   try {
     response = await fetch(BASE_URL + path, {
       method, signal, credentials: 'same-origin',
-      headers: { Accept: 'application/json', ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}), ...(writes ? { 'X-CSRF-TOKEN': csrfToken } : {}) },
-      ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
+      headers: { Accept: 'application/json', ...(body !== undefined && !(body instanceof FormData) ? { 'Content-Type': 'application/json' } : {}), ...(writes ? { 'X-CSRF-TOKEN': csrfToken } : {}) },
+      ...(body !== undefined ? { body: body instanceof FormData ? body : JSON.stringify(body) } : {}),
     });
   } catch (error) {
     if (error instanceof Error && error.name === 'AbortError') throw error;
