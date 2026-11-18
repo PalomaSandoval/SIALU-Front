@@ -35,3 +35,17 @@
 .omd-group td{background:#f0f4f9;font-weight:600}
 .omd-history{margin-top:16px}
 @media (max-width:640px){.omd-c1,.omd-c2{display:none}.omd-c3{left:0}}
+/* Estado del mes (proceso automático) y diagnóstico de administradores. */
+.omd-state{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 12px;margin:16px 0 8px;padding:12px 16px;border:1px solid var(--palette-editorialBorder);border-left-width:4px;border-radius:8px;background:var(--palette-white)}
+.omd-state strong{font-size:16px}
+.omd-state .omd-partial{margin:0}
+.omd-state.is-validado{border-left-color:#2e7d32}
+.omd-state.is-pendiente{border-left-color:#8a6d00}
+.omd-state.is-no_recuperable,.omd-state.is-risk{border-left-color:#b01818}
+.omd-state.is-en_curso{border-left-color:var(--palette-editorialMuted)}
+.omd-progress,.omd-notice{margin:8px 0;color:var(--palette-editorialMuted)}
+.omd-admin{margin-top:24px;padding:8px 16px;border:1px dashed var(--palette-editorialBorder);border-radius:8px}
+.omd-admin summary{cursor:pointer;font-weight:600}
+.omd-audit{border-collapse:collapse;font-size:12px;margin:8px 0}
+.omd-audit th,.omd-audit td{padding:4px 8px;border-bottom:1px solid var(--palette-editorialBorder);text-align:left}
+.omd-audit tr.is-used td{font-weight:700}

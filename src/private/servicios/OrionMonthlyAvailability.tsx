@@ -7,45 +7,66 @@ import './orion-monthly-availability.css';
 type DayInfo = { dia: number; cobertura: 'COMPLETA' | 'SD' | 'FUTURO'; fuente: string | null; captura_origen: number | null; motivo: string | null };
 type Summary = { orden: number; nivel: 'GENERAL' | 'AREA' | 'GRUPO'; area: string | null; grupo: string | null; total_nodos: number; incluidos: number; sin_datos: number; con_error: number; no_consultados: number; disponibilidad: string | null; caidas_por_dia: Record<string, number | null> };
 type NodeRow = { node_id: number; nombre: string | null; area: string | null; grupo: string | null; estado: 'ok' | 'sin_datos' | 'error' | 'no_consultado'; motivo: string | null; texto_orion: string | null; disponibilidad: string | null; dias: Record<string, number | null> };
-type CaptureItem = { id: number; origen: string; estado: string; valida: boolean; solicitada: string; inicio: string | null; fin: string | null; periodo_orion: string };
+type Auto = {
+  estado: 'en_curso' | 'programado' | 'listo' | 'en_proceso' | 'reintento' | 'completo' | 'no_recuperable';
+  ventana: { desde: string; hasta: string }; intentos_fallidos: number; proximo_intento: string | null; en_riesgo: boolean;
+  ultimo_intento: { estado: string; fin: string | null; motivo: string | null } | null;
+};
 type Report = {
-  mes: string; dias_mes: number; estado_mes: string; marca_parcial: boolean;
-  captura: null | { id: number; origen: string; estado: string; valida: boolean; periodo_orion: string; inicio: string | null; fin: string | null; motivos_invalidez: string[]; advertencias: string[]; hash: string; integridad_verificada: boolean; seleccionada: boolean; seleccion: { fecha: string } | null; conteos: { total: number; ok: number; sin_datos: number; error: number; no_consultados: number } };
-  dias: DayInfo[]; resumen: Summary[]; nodos: NodeRow[]; capturas: CaptureItem[]; selecciones: { id_seleccion: number; id_captura: number; id_captura_anterior: number | null; fecha: string; motivo: string }[];
+  mes: string; dias_mes: number; estado_mes: 'validado' | 'pendiente' | 'no_recuperable' | 'en_curso'; marca_parcial: boolean; automatico: Auto;
+  captura: null | { id: number; estado: string; inicio: string | null; motivos_invalidez: string[]; hash: string; integridad_verificada: boolean; conteos: { total: number; ok: number; sin_datos: number; error: number; no_consultados: number } };
+  dias: DayInfo[]; resumen: Summary[]; nodos: NodeRow[];
 };
-type CaptureStatus = { id: number; estado: string; valida: boolean; avance: { consultados: number; total: number | null }; mensaje_error: string | null; motivos_invalidez: string[] };
+type CaptureItem = { id: number; origen: string; estado: string; valida: boolean; solicitada: string; inicio: string | null; fin: string | null; periodo_orion: string };
+type Diagnosis = { capturas: CaptureItem[]; selecciones: { id_seleccion: number; id_captura: number; id_captura_anterior: number | null; fecha: string; motivo: string }[]; en_curso: number | null };
+type CaptureStatus = { id: number; estado: string; valida: boolean; avance: { consultados: number; total: number | null } };
 
-const STATE_LABELS: Record<string, string> = {
-  oficial: 'Oficial', vigente: 'Vigente', provisional: 'Provisional', parcial: 'Parcial', no_validada: 'No validada',
-  no_seleccionada: 'Captura no seleccionada', no_disponible: 'No disponible',
-};
-const STATE_HELP: Record<string, string> = {
-  oficial: 'Captura completa y validada; el periodo para reemplazarla terminó.',
-  vigente: 'Última captura completa y validada. Puede sustituirla otra captura validada hasta que termine el mes siguiente.',
-  provisional: 'Mes en curso: «This Month» de Orion. Cambiará hasta que termine el mes.',
-  parcial: 'Solo hay capturas parciales de este mes; no es una cifra oficial.',
-  no_validada: 'Hay una captura completa que no pasó la validación; no es una cifra oficial.',
-  no_seleccionada: 'Esta captura no es la seleccionada para el mes.',
-  no_disponible: 'No existe ninguna captura de este mes.',
+const STATE_LABELS: Record<Report['estado_mes'], string> = {
+  validado: 'Completo y validado', pendiente: 'Pendiente', no_recuperable: 'No recuperable', en_curso: 'Mes en curso',
 };
 const localTime = new Intl.DateTimeFormat('es-MX', { dateStyle: 'medium', timeStyle: 'short' });
+const localDate = new Intl.DateTimeFormat('es-MX', { dateStyle: 'long' });
+const when = (iso: string | null) => iso ? localTime.format(new Date(iso)) : '—';
 const BASE = '/monitoreo/disponibilidad/reporte-mensual';
 
-function previousMonth(): string {
-  // Orion's local time is UTC-6.
+// Orion's local time is UTC-6.
+function orionMonth(offset: number): string {
   const now = new Date(Date.now() - 6 * 3600 * 1000);
-  const d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 1, 1));
+  const d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + offset, 1));
   return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`;
 }
 function errorText(reason: unknown, fallback: string): string {
   if (!(reason instanceof ApiError)) return reason instanceof Error ? reason.message : fallback;
   if (reason.status === 0) return 'No se pudo conectar con SIALU API.';
   if (reason.status === 401 || reason.status === 419) return 'Tu sesión de SIALU expiró. Vuelve a iniciar sesión.';
-  if (reason.status === 403) return 'Solo un administrador puede solicitar capturas.';
   return reason.message || fallback;
 }
 const percent = (value: string | null) => value === null ? 'Sin datos' : `${value} %`;
 const counts = (s: Summary) => [`${s.incluidos} de ${s.total_nodos} incluidos`, s.sin_datos ? `${s.sin_datos} sin datos` : '', s.con_error ? `${s.con_error} con error` : '', s.no_consultados ? `${s.no_consultados} no consultados` : ''].filter(Boolean).join(' · ');
+
+/** What the automatic process is doing for this month, in plain words. */
+function stateText(r: Report): string {
+  const a = r.automatico;
+  // The window closes at the first instant of the month after next; its last day is the day before.
+  const lastDay = localDate.format(new Date(new Date(a.ventana.hasta).getTime() - 6 * 3600 * 1000 - 1));
+  switch (r.estado_mes) {
+    case 'validado':
+      return `Resultado completo y validado de Orion «Availability Statistics»${r.captura?.inicio ? `, consultado el ${when(r.captura.inicio)}` : ''}. SIALU ya no vuelve a consultar este mes.`;
+    case 'en_curso':
+      return `El mes no ha terminado. SIALU consultará Orion automáticamente a partir del ${when(a.proximo_intento ?? a.ventana.desde)} y el reporte aparecerá aquí.`;
+    case 'no_recuperable':
+      return 'No se obtuvo un resultado completo y validado mientras Orion ofrecía este mes. Orion solo entrega el mes en curso y el anterior, así que ya no se puede recuperar.'
+        + (r.captura ? ' Se muestra el mejor resultado parcial guardado; no es una cifra oficial.' : '');
+    default: {
+      const next = a.estado === 'en_proceso' ? 'La consulta a Orion está en curso.'
+        : a.estado === 'listo' ? 'La siguiente consulta empezará en unos minutos.'
+        : a.estado === 'programado' ? `La primera consulta será el ${when(a.proximo_intento)}.`
+        : `Próximo intento: ${when(a.proximo_intento)}.`;
+      return `SIALU todavía no obtiene un resultado completo y validado de este mes y lo reintenta automáticamente. ${next} Orion ofrece este mes hasta el ${lastDay}.`
+        + (r.captura ? ' Mientras tanto se muestra el último resultado parcial; no es una cifra oficial.' : '');
+    }
+  }
+}
 
 function DayCell({ value, info }: { value: number | null | undefined; info: DayInfo | undefined }) {
   if (info?.cobertura === 'FUTURO') return <td className="omd-day is-future">–</td>;
@@ -53,81 +74,115 @@ function DayCell({ value, info }: { value: number | null | undefined; info: DayI
   return <td className={`omd-day ${value ? 'is-hit' : 'is-zero'}`}>{value}</td>;
 }
 
-/** Orion → Reporte mensual: stored captures of «Availability Statistics» by area, group and node. */
-export default function OrionMonthlyAvailability() {
-  const { session } = useAuth();
-  const isAdmin = session?.data.TipoUsuario.trim().toUpperCase() === 'ADMINISTRADOR';
-  const [month, setMonth] = useState(previousMonth);
-  const [captureId, setCaptureId] = useState<number | null>(null);
-  const [report, setReport] = useState<Report | null>(null);
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
+/** Administrators only: stored captures of the month (audit) and an explicit request to query Orion again. */
+function AdminDiagnosis({ month, report, onChanged }: { month: string; report: Report; onChanged: () => void }) {
+  const [open, setOpen] = useState(false);
+  const [data, setData] = useState<Diagnosis | null>(null);
   const [running, setRunning] = useState<CaptureStatus | null>(null);
-  const [notice, setNotice] = useState('');
-  const [exporting, setExporting] = useState(false);
+  const [message, setMessage] = useState('');
   const poll = useRef<number | null>(null);
+  const stop = () => { if (poll.current) window.clearInterval(poll.current); poll.current = null; };
 
-  const load = useCallback((signal?: AbortSignal) => {
-    setLoading(true); setError('');
-    const query = captureId === null ? '' : `?captura=${captureId}`;
-    request<{ data: Report }>(`${BASE}/meses/${month}${query}`, { signal })
-      .then(data => setReport(data.data))
-      .catch(reason => { if (!signal?.aborted) { setReport(null); setError(errorText(reason, 'No se pudo obtener el reporte.')); } })
-      .finally(() => { if (!signal?.aborted) setLoading(false); });
-  }, [month, captureId]);
+  const load = useCallback(() => request<{ data: Diagnosis }>(`${BASE}/capturas?mes=${month}`)
+    .then(d => { setData(d.data); return d.data; })
+    .catch(reason => { setMessage(errorText(reason, 'No se pudo obtener el diagnóstico.')); return null; }), [month]);
 
-  useEffect(() => { const c = new AbortController(); load(c.signal); return () => c.abort(); }, [load]);
-  useEffect(() => () => { if (poll.current) window.clearInterval(poll.current); }, []);
-
-  // A capture already pending or running (e.g. requested by the scheduler) is followed too.
-  useEffect(() => {
-    request<{ data: { en_curso: number | null } }>(`${BASE}/capturas?mes=${month}`)
-      .then(data => { if (data.data.en_curso) follow(data.data.en_curso); })
-      .catch(() => undefined);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  function follow(id: number) {
-    if (poll.current) window.clearInterval(poll.current);
-    const tick = () => request<{ data: CaptureStatus }>(`${BASE}/capturas/${id}`).then(data => {
-      setRunning(data.data);
-      if (!['pendiente', 'en_proceso'].includes(data.data.estado)) {
-        if (poll.current) window.clearInterval(poll.current);
-        poll.current = null;
-        setNotice(`Captura ${id} terminada: ${data.data.estado}${data.data.valida ? ', validada' : ''}.`);
-        load();
+  const follow = useCallback((id: number) => {
+    stop();
+    const tick = () => request<{ data: CaptureStatus }>(`${BASE}/capturas/${id}`).then(d => {
+      setRunning(d.data);
+      if (!['pendiente', 'en_proceso'].includes(d.data.estado)) {
+        stop();
+        setMessage(`Consulta #${id} terminada: ${d.data.estado}${d.data.valida ? ', validada' : ''}.`);
+        load(); onChanged();
       }
     }).catch(() => undefined);
     tick();
     poll.current = window.setInterval(tick, 5000);
-  }
+  }, [load, onChanged]);
+
+  useEffect(() => { setData(null); setRunning(null); setMessage(''); stop(); }, [month]);
+  useEffect(() => stop, []);
+  useEffect(() => { if (open && !data) load().then(d => { if (d?.en_curso) follow(d.en_curso); }); }, [open, data, load, follow]);
+
+  // Orion only answers «Last Month»: an explicit request makes sense only for the month just closed.
+  const canRequest = month === orionMonth(-1);
+  const busy = !!running && ['pendiente', 'en_proceso'].includes(running.estado);
 
   function requestCapture() {
-    setNotice(''); setError('');
+    if (report.estado_mes === 'validado' && !window.confirm('Este mes ya tiene un resultado completo y validado. ¿Consultar Orion de nuevo? Si la nueva consulta también resulta completa y validada, sustituirá al resultado actual; el anterior se conserva en el historial.')) return;
+    setMessage('');
     request<{ data: CaptureStatus }>(`${BASE}/capturas`, { method: 'POST' })
-      .then(data => follow(data.data.id))
+      .then(d => follow(d.data.id))
       .catch(reason => {
-        if (reason instanceof ApiError && reason.status === 409) { setNotice('Ya hay una captura pendiente o en proceso; se muestra su avance.'); request<{ data: { en_curso: number | null } }>(`${BASE}/capturas?mes=${month}`).then(d => { if (d.data.en_curso) follow(d.data.en_curso); }); return; }
-        setError(errorText(reason, 'No se pudo solicitar la captura.'));
+        if (reason instanceof ApiError && reason.status === 409) { setMessage('Ya hay una consulta pendiente o en proceso; se muestra su avance.'); load().then(d => { if (d?.en_curso) follow(d.en_curso); }); return; }
+        setMessage(errorText(reason, 'No se pudo solicitar la consulta.'));
       });
   }
 
-  // The PDF is produced only here, on demand, from the stored capture shown on screen (same month and capture).
+  return <details className="omd-admin" open={open} onToggle={e => setOpen((e.target as HTMLDetailsElement).open)}>
+    <summary>Diagnóstico (administradores)</summary>
+    <p className="omd-legend">Capturas guardadas de este mes, para auditoría. El reporte siempre usa la captura completa y validada más reciente; ninguna se borra.</p>
+    {report.captura && <p className="omd-legend">El reporte usa la captura #{report.captura.id} · SHA-256 {report.captura.hash}.</p>}
+    {report.automatico.ultimo_intento?.motivo && report.estado_mes !== 'validado' && <p className="omd-legend">Último intento ({report.automatico.ultimo_intento.estado}, {when(report.automatico.ultimo_intento.fin)}): {report.automatico.ultimo_intento.motivo}</p>}
+    {canRequest && <p><button type="button" onClick={requestCapture} disabled={busy}>{busy ? 'Consulta en curso…' : 'Consultar Orion de nuevo'}</button></p>}
+    {busy && running && <p role="status" className="omd-progress">Consulta #{running.id} {running.estado === 'pendiente' ? 'pendiente: empezará en menos de un minuto' : `en proceso: ${running.avance.consultados} de ${running.avance.total ?? '…'} nodos`}.</p>}
+    {message && <p role="status" className="omd-notice">{message}</p>}
+    {data && <>
+      <table className="omd-audit"><thead><tr><th>#</th><th>Origen</th><th>Estado</th><th>Periodo de Orion</th><th>Solicitada</th><th>Terminó</th></tr></thead>
+        <tbody>{data.capturas.length === 0 ? <tr><td colSpan={6}>Sin capturas.</td></tr> : data.capturas.map(c => <tr key={c.id} className={c.id === report.captura?.id ? 'is-used' : ''}>
+          <td>{c.id}</td><td>{c.origen.toLowerCase()}</td><td>{c.estado.toLowerCase()}{c.valida ? ' · validada' : ''}</td><td>{c.periodo_orion}</td><td>{when(c.solicitada)}</td><td>{when(c.fin)}</td>
+        </tr>)}</tbody></table>
+      {data.selecciones.length > 0 && <ul className="omd-legend">{data.selecciones.map(s => <li key={s.id_seleccion}>{when(s.fecha)}: captura #{s.id_captura}{s.id_captura_anterior ? ` (reemplaza a #${s.id_captura_anterior})` : ''}. {s.motivo}</li>)}</ul>}
+    </>}
+  </details>;
+}
+
+/** Orion → Reporte mensual: one report per month from Orion «Availability Statistics», by area, group and node. */
+export default function OrionMonthlyAvailability() {
+  const { session } = useAuth();
+  const isAdmin = session?.data.TipoUsuario.trim().toUpperCase() === 'ADMINISTRADOR';
+  const [month, setMonth] = useState(() => orionMonth(-1));
+  const [report, setReport] = useState<Report | null>(null);
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [exporting, setExporting] = useState(false);
+
+  const load = useCallback((signal?: AbortSignal, quiet = false) => {
+    if (!quiet) { setLoading(true); setError(''); }
+    request<{ data: Report }>(`${BASE}/meses/${month}`, { signal })
+      .then(data => setReport(data.data))
+      .catch(reason => { if (!signal?.aborted && !quiet) { setReport(null); setError(errorText(reason, 'No se pudo obtener el reporte.')); } })
+      .finally(() => { if (!signal?.aborted && !quiet) setLoading(false); });
+  }, [month]);
+
+  useEffect(() => { const c = new AbortController(); load(c.signal); return () => c.abort(); }, [load]);
+  const refresh = useCallback(() => load(undefined, true), [load]);
+
+  // While SIALU is querying Orion for this month, refresh quietly so the report appears when it is ready.
+  const working = report?.mes === month && ['listo', 'en_proceso'].includes(report.automatico.estado);
+  useEffect(() => {
+    if (!working) return;
+    const id = window.setInterval(refresh, 30000);
+    return () => window.clearInterval(id);
+  }, [working, refresh]);
+
+  // The PDF is produced only here, on demand, from the stored report shown on screen.
   async function exportPdf() {
-    if (!report?.captura || report.mes !== month || (captureId !== null && report.captura.id !== captureId)) return;
+    if (!report?.captura || report.mes !== month) return;
     const { mes } = report;
-    const id = report.captura.id;
     setExporting(true); setError('');
     try {
-      const response = await fetch(`/api/v1${BASE}/meses/${mes}/pdf?captura=${id}`, { credentials: 'same-origin', headers: { Accept: 'application/pdf' } });
+      const response = await fetch(`/api/v1${BASE}/meses/${mes}/pdf?captura=${report.captura.id}`, { credentials: 'same-origin', headers: { Accept: 'application/pdf' } });
       if (!response.ok) {
         const body = await response.json().catch(() => ({}));
+        if (response.status === 409) load();
         throw new Error(body.message || `Error HTTP ${response.status}`);
       }
       const url = URL.createObjectURL(await response.blob());
       const link = document.createElement('a');
       link.href = url;
-      link.download = `disponibilidad-orion-${mes}-captura-${id}.pdf`;
+      link.download = `disponibilidad-orion-${mes}.pdf`;
       link.click();
       window.setTimeout(() => URL.revokeObjectURL(url), 1000);
     } catch (reason) {
@@ -141,51 +196,40 @@ export default function OrionMonthlyAvailability() {
   const groupKey = (area: string | null, grupo: string | null) => `${area ?? '\0'}\u001f${grupo ?? '\0'}`;
   const nodesByGroup = new Map<string, NodeRow[]>();
   report?.nodos.forEach(n => { const k = groupKey(n.area, n.grupo); nodesByGroup.set(k, [...(nodesByGroup.get(k) ?? []), n]); });
-  const running_ = running && ['pendiente', 'en_proceso'].includes(running.estado);
+  const canExport = !!report?.captura && report.mes === month && report.captura.integridad_verificada;
 
   return <section className="network-admin orion-monthly">
     <header>
       <h1>Reporte mensual de disponibilidad</h1>
-      <p>Porcentajes oficiales de Orion «Availability Statistics» por área, grupo y nodo. El reporte se arma solo con capturas guardadas en SIALU; las columnas de días muestran las caídas iniciadas y no modifican el porcentaje.</p>
+      <p>Disponibilidad mensual de Orion «Availability Statistics» por área, grupo y nodo. SIALU la consulta y la guarda automáticamente al cerrar cada mes. Las columnas de días muestran las caídas iniciadas y no modifican el porcentaje.</p>
     </header>
 
     <div className="omd-toolbar">
-      <label>Mes<input type="month" value={month} onChange={e => { setMonth(e.target.value); setCaptureId(null); setNotice(''); }} /></label>
-      {report && report.capturas.length > 0 && <label>Captura
-        <select value={captureId ?? ''} onChange={e => setCaptureId(e.target.value ? Number(e.target.value) : null)}>
-          <option value="">La que corresponde al mes</option>
-          {report.capturas.map(c => <option key={c.id} value={c.id}>#{c.id} · {c.estado.toLowerCase()}{c.valida ? ' · validada' : ''} · {c.periodo_orion === 'Last Month' ? 'mes anterior' : 'este mes'} · {c.inicio ? localTime.format(new Date(c.inicio)) : 'sin iniciar'}</option>)}
-        </select>
-      </label>}
-      <button type="button" onClick={exportPdf} disabled={loading || exporting || !report?.captura || report.mes !== month || !report.captura.integridad_verificada}
-        title={report?.captura ? `Exporta la captura #${report.captura.id} de ${report.mes}` : 'No hay una captura guardada de este mes'}>{exporting ? 'Exportando PDF…' : 'Exportar PDF'}</button>
-      {isAdmin && <button type="button" onClick={requestCapture} disabled={!!running_}>{running_ ? 'Captura en curso…' : 'Solicitar captura'}</button>}
+      <label>Mes<input type="month" value={month} max={orionMonth(0)} onChange={e => { if (e.target.value) setMonth(e.target.value); }} /></label>
+      <button type="button" onClick={exportPdf} disabled={loading || exporting || !canExport}
+        title={canExport ? `Descarga el reporte de ${report?.mes} en PDF` : 'Todavía no hay un reporte de este mes'}>{exporting ? 'Exportando PDF…' : 'Exportar PDF'}</button>
     </div>
 
-    {running_ && <p role="status" className="omd-progress">Captura {running.id} {running.estado === 'pendiente' ? 'pendiente: el programador la iniciará en menos de un minuto' : `en proceso: ${running.avance.consultados} de ${running.avance.total ?? '…'} nodos consultados`}.</p>}
-    {notice && <p role="status" className="omd-notice">{notice}</p>}
     {error && <p role="alert" className="omd-error">{error}</p>}
     {loading && <p role="status">Cargando…</p>}
 
-    {report && <>
-      <div className={`omd-state is-${report.estado_mes}`}>
-        <strong>{STATE_LABELS[report.estado_mes] ?? report.estado_mes}</strong>
+    {report && report.mes === month && <>
+      <div className={`omd-state is-${report.estado_mes}${report.automatico.en_riesgo ? ' is-risk' : ''}`} role={report.estado_mes === 'no_recuperable' || report.automatico.en_riesgo ? 'alert' : undefined}>
+        <strong>{STATE_LABELS[report.estado_mes]}</strong>
         {report.marca_parcial && <span className="omd-partial">PARCIAL — no oficial</span>}
-        <span>{STATE_HELP[report.estado_mes]}</span>
+        <span>{stateText(report)}</span>
+        {report.automatico.en_riesgo && <span className="omd-error">Quedan pocos días para obtenerlo: si no se logra antes del cierre, el mes ya no se podrá recuperar.</span>}
       </div>
-      {report.captura && <dl className="omd-meta">
-        <div><dt>Captura</dt><dd>#{report.captura.id} ({report.captura.origen.toLowerCase()}) · {report.captura.inicio ? localTime.format(new Date(report.captura.inicio)) : '—'} · periodo de Orion «{report.captura.periodo_orion}»</dd></div>
-        <div><dt>Nodos</dt><dd>{report.captura.conteos.total} · incluidos {report.captura.conteos.ok} · sin datos {report.captura.conteos.sin_datos} · con error {report.captura.conteos.error} · no consultados {report.captura.conteos.no_consultados}</dd></div>
-        <div><dt>Disponibilidad general</dt><dd><strong>{general ? percent(general.disponibilidad) : '—'}</strong></dd></div>
-        <div><dt>Integridad</dt><dd>{report.captura.integridad_verificada ? `Verificada · SHA-256 ${report.captura.hash.slice(0, 16)}…` : <span className="omd-error">El contenido no coincide con su hash</span>}</dd></div>
-        {report.captura.seleccion && <div><dt>Selección</dt><dd>Seleccionada el {localTime.format(new Date(report.captura.seleccion.fecha))}</dd></div>}
-        {report.captura.motivos_invalidez.length > 0 && <div><dt>No validada por</dt><dd>{report.captura.motivos_invalidez.join(' ')}</dd></div>}
-      </dl>}
 
       {report.captura && <>
-        <p className="omd-legend">Columnas 1–{report.dias_mes}: caídas iniciadas ese día (hora local de Orion, UTC-6). <b>0</b>: sin caídas, con cobertura de eventos demostrada. <i>s/d</i>: sin cobertura demostrada. «–»: el día aún no ocurría. Las filas de resumen suman las caídas iniciadas de sus nodos y promedian sus nodos incluidos.</p>
+        <dl className="omd-meta">
+          <div><dt>Disponibilidad general</dt><dd><strong>{general ? percent(general.disponibilidad) : '—'}</strong></dd></div>
+          <div><dt>Nodos</dt><dd>{report.captura.conteos.total} · incluidos {report.captura.conteos.ok} · sin datos {report.captura.conteos.sin_datos}{report.captura.conteos.error ? ` · con error ${report.captura.conteos.error}` : ''}{report.captura.conteos.no_consultados ? ` · no consultados ${report.captura.conteos.no_consultados}` : ''}</dd></div>
+          {!report.captura.integridad_verificada && <div><dt>Integridad</dt><dd className="omd-error">El contenido guardado no coincide con su huella; no se puede exportar.</dd></div>}
+        </dl>
+        <p className="omd-legend">Columnas 1–{report.dias_mes}: caídas iniciadas ese día (hora local de Orion, UTC-6). <b>0</b>: sin caídas, con cobertura de eventos demostrada. <i>s/d</i>: sin cobertura demostrada. Las filas de resumen suman las caídas iniciadas de sus nodos y promedian sus nodos con datos.</p>
         <div className="omd-table-wrap"><table className="omd-table">
-          <thead><tr><th className="omd-sticky omd-c1">Área</th><th className="omd-sticky omd-c2">Grupo</th><th className="omd-sticky omd-c3">Nodo</th>{days.map(d => <th key={d} className="omd-day" title={info.get(d)?.motivo ?? info.get(d)?.fuente ?? ''}>{d}</th>)}<th className="omd-pct">Disponibilidad mensual</th></tr></thead>
+          <thead><tr><th className="omd-sticky omd-c1">Área</th><th className="omd-sticky omd-c2">Grupo</th><th className="omd-sticky omd-c3">Nodo</th>{days.map(d => <th key={d} className="omd-day" title={info.get(d)?.motivo ?? ''}>{d}</th>)}<th className="omd-pct">Disponibilidad mensual</th></tr></thead>
           <tbody>
             {report.resumen.filter(s => s.nivel !== 'GENERAL').map(s => <Fragment key={s.orden}>
               <tr className={s.nivel === 'AREA' ? 'omd-area' : 'omd-group'}>
@@ -207,9 +251,7 @@ export default function OrionMonthlyAvailability() {
         </table></div>
       </>}
 
-      {report.selecciones.length > 0 && <details className="omd-history"><summary>Historial de selección ({report.selecciones.length})</summary>
-        <ul>{report.selecciones.map(s => <li key={s.id_seleccion}>{localTime.format(new Date(s.fecha))}: captura #{s.id_captura}{s.id_captura_anterior ? ` (reemplaza a #${s.id_captura_anterior})` : ''}. {s.motivo}</li>)}</ul>
-      </details>}
+      {isAdmin && report.estado_mes !== 'en_curso' && <AdminDiagnosis month={month} report={report} onChanged={refresh} />}
     </>}
   </section>;
 }
