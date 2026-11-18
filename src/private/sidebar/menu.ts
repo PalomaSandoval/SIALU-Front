@@ -21,6 +21,7 @@ export const menu: MenuItem[] = [
       { label: 'Eventos Down/Up', path: '/servicios/orion/eventos' },
       { label: 'Alertas', path: '/servicios/orion/alertas' },
       { label: 'Disponibilidad de nodos', path: '/servicios/orion/disponibilidad-nodos' },
+      { label: 'Reporte mensual', path: '/servicios/orion/reporte-mensual' },
     ] },
     { label: 'Palo Alto', children: [
       { label: 'Resumen', path: '/servicios/palo-alto' },

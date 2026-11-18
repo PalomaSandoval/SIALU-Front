@@ -15,6 +15,7 @@ import OrionAlerts from '../private/servicios/OrionAlerts.tsx';
 import OrionAvailability from '../private/servicios/OrionAvailability.tsx';
 import OrionIncidents from '../private/servicios/OrionIncidents.tsx';
 import OrionNodeAvailability from '../private/servicios/OrionNodeAvailability.tsx';
+import OrionMonthlyAvailability from '../private/servicios/OrionMonthlyAvailability.tsx';
 
 import TrafficActionsMain from '../private/catalogos/acciones/Main.tsx';
 
@@ -30,6 +31,7 @@ const pages: Record<string, React.ReactNode> = {
   '/servicios/orion/eventos': <OrionAvailability />,
   '/servicios/orion/incidentes': <OrionIncidents />,
   '/servicios/orion/disponibilidad-nodos': <OrionNodeAvailability />,
+  '/servicios/orion/reporte-mensual': <OrionMonthlyAvailability />,
   '/servicios/palo-alto': <IntegrationStatus adapter="paloalto" title="Palo Alto" />,
   '/consultas/eventos': <EventQueriesMain />,
   '/catalogos/fuentes': <FuentesMain />,

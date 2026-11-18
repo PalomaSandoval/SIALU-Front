@@ -6,7 +6,7 @@ import './orion-node-availability.css';
 
 type OrionNode = { node_id: number; nombre: string };
 type Period = { periodo: string; texto: string; disponibilidad: number };
-type Stats = { node_id: number; consultado_en: string; periodos: Period[]; sesion_cerrada: boolean };
+type Stats = { node_id: number; estado: 'con_datos' | 'sin_datos'; consultado_en: string; periodos: Period[]; sesion_cerrada: boolean };
 type Result = { node: OrionNode; stats: Stats };
 
 const periodLabels: Record<string, string> = {
@@ -30,6 +30,8 @@ function errorText(reason: unknown, fallback: string): string {
   if (reason.status === 0) return 'No se pudo conectar con SIALU API. Revisa que el backend esté en ejecución.';
   if (reason.status === 401 || reason.status === 419) return 'Tu sesión de SIALU expiró. Vuelve a iniciar sesión e intenta de nuevo.';
   if (reason.status === 403) return 'Tu usuario no tiene permiso para esta consulta.';
+  // The API answers 404 with this message when Orion.Nodes has no such NodeID; any other 404 is a missing route.
+  if (reason.status === 404 && reason.message.includes('no existe en Orion')) return `${reason.message} No se muestra «Sin datos» porque el NodeID no corresponde a un nodo.`;
   if (reason.status === 404) return 'SIALU API no tiene esta ruta. Revisa que el backend esté actualizado.';
   if (reason.status === 422) return `Dato no válido: ${reason.message}`;
   if (reason.status === 503) return reason.message;
@@ -132,14 +134,15 @@ export default function OrionNodeAvailability() {
         <h2>{nodeLabel(result.node)}</h2>
         <p>NodeID {result.stats.node_id} · Consultado el {localTime.format(new Date(result.stats.consultado_en))} (hora local) · {utcTime.format(new Date(result.stats.consultado_en))} UTC</p>
       </header>
-      <div className="network-table"><table>
+      {result.stats.estado === 'sin_datos' && <p className="orion-node-nodata" role="status"><strong>Sin datos.</strong> El nodo existe en Orion, pero Orion no devolvió estadísticas de disponibilidad para ningún periodo. No equivale a 0 % ni a 100 %.</p>}
+      {result.stats.estado !== 'sin_datos' && <div className="network-table"><table>
         <thead><tr><th>Periodo</th><th>Valor en Orion</th><th>Porcentaje</th></tr></thead>
         <tbody>{result.stats.periodos.map(period => <tr key={period.periodo}>
           <th>{periodLabels[period.periodo] ?? period.periodo}<small>{period.periodo}</small></th>
           <td>{period.texto}</td>
           <td className="orion-node-percent">{percent.format(period.disponibilidad)} %</td>
         </tr>)}</tbody>
-      </table></div>
+      </table></div>}
       {!result.stats.sesion_cerrada && <p className="orion-node-note">Aviso: SIALU no pudo confirmar el cierre de la sesión web en Orion.</p>}
     </article>}
   </section>;

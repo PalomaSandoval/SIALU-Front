@@ -22,3 +22,4 @@
 .orion-node-result header p{margin:0 0 8px}
 .network-table td.orion-node-percent{font-variant-numeric:tabular-nums;font-weight:600}
 .network-admin .orion-node-note{color:var(--palette-errorText)}
+.orion-node-nodata{margin:8px 0;padding:12px 14px;border:1px solid var(--palette-editorialBorder);border-radius:8px;background:var(--palette-editorialSurface)}
