@@ -2,16 +2,8 @@
 .omd-toolbar{display:flex;flex-wrap:wrap;align-items:flex-end;gap:12px 16px;margin:24px 0 12px}
 .omd-toolbar label{display:flex;flex-direction:column;gap:4px}
 .network-admin .omd-toolbar button{font-weight:600}
-.omd-progress,.omd-notice{margin:8px 0;color:var(--palette-editorialMuted)}
 .network-admin .omd-error,.omd-error{color:var(--palette-errorText)}
-.omd-state{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 12px;margin:16px 0 8px;padding:12px 16px;border:1px solid var(--palette-editorialBorder);border-left-width:4px;border-radius:8px;background:var(--palette-white)}
-.omd-state strong{font-size:16px}
-.omd-state.is-oficial{border-left-color:#2e7d32}
-.omd-state.is-vigente{border-left-color:#1565c0}
-.omd-state.is-provisional{border-left-color:#8a6d00}
-.omd-state.is-parcial,.omd-state.is-no_validada,.omd-state.is-no_seleccionada{border-left-color:#b01818}
-.omd-state.is-no_disponible{border-left-color:var(--palette-editorialMuted)}
-.omd-partial{padding:2px 8px;border-radius:4px;background:#b01818;color:#fff;font-weight:700;font-size:12px;letter-spacing:.04em}
+.omd-partial{display:inline-block;margin:8px 0;padding:4px 8px;border-radius:4px;background:#b01818;color:#fff;font-weight:700;font-size:12px}
 .omd-meta{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:8px 24px;margin:12px 0}
 .omd-meta dt{color:var(--palette-editorialMuted);font-size:12px}
 .omd-meta dd{margin:2px 0 0;overflow-wrap:anywhere}
@@ -33,9 +25,9 @@
 .omd-pct{text-align:right;min-width:110px}
 .omd-area td{background:#dfe7f2;font-weight:600}
 .omd-group td{background:#f0f4f9;font-weight:600}
-.omd-history{margin-top:16px}
 @media (max-width:640px){.omd-c1,.omd-c2{display:none}.omd-c3{left:0}}
-/* Estado del mes (proceso automático) y diagnóstico de administradores. */
+/* Estado del mes mientras el proceso automático está pendiente. */
+.omd-consulted{margin:16px 0 8px;color:var(--palette-editorialMuted)}
 .omd-state{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 12px;margin:16px 0 8px;padding:12px 16px;border:1px solid var(--palette-editorialBorder);border-left-width:4px;border-radius:8px;background:var(--palette-white)}
 .omd-state strong{font-size:16px}
 .omd-state .omd-partial{margin:0}
@@ -43,9 +35,3 @@
 .omd-state.is-pendiente{border-left-color:#8a6d00}
 .omd-state.is-no_recuperable,.omd-state.is-risk{border-left-color:#b01818}
 .omd-state.is-en_curso{border-left-color:var(--palette-editorialMuted)}
-.omd-progress,.omd-notice{margin:8px 0;color:var(--palette-editorialMuted)}
-.omd-admin{margin-top:24px;padding:8px 16px;border:1px dashed var(--palette-editorialBorder);border-radius:8px}
-.omd-admin summary{cursor:pointer;font-weight:600}
-.omd-audit{border-collapse:collapse;font-size:12px;margin:8px 0}
-.omd-audit th,.omd-audit td{padding:4px 8px;border-bottom:1px solid var(--palette-editorialBorder);text-align:left}
-.omd-audit tr.is-used td{font-weight:700}

@@ -20,7 +20,7 @@ const colors = {
   "sidebarSurface": "#fcf9fc",
   "navigationActive": "rgba(139,5,125,.08)",
   "surfaceShadow": "rgba(0,0,0,.06)",
-  "primary": "#8b057d",
+  "primary": "#371e49",
   "white": "#fff",
   "text": "#141414",
   "neutralSurface": "#ececec",

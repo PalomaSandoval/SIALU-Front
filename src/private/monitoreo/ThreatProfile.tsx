@@ -78,7 +78,7 @@ export default function ThreatProfile() {
       <p>{error}</p>
       <button type="button" onClick={() => setReload(value => value + 1)}>Reintentar</button>
     </div> : !data || !official || !observed ? <p className="threat-severity-card threat-severity-note" role="status">Cargando ficha…</p> : <>
-      <section className="threat-detail-block threat-profile-first" aria-labelledby="threat-official-title">
+      {official.estado !== 'SIN_ACCESO' && <section className="threat-detail-block threat-profile-first" aria-labelledby="threat-official-title">
         <header className="device-status-header">
           <h2 id="threat-official-title">Información de Palo Alto</h2>
           {official.fuente && <span className="threat-detail-count">
@@ -102,10 +102,9 @@ export default function ThreatProfile() {
             {official.estado === 'NO_ENCONTRADA' ? 'Palo Alto no tiene información publicada para este ThreatID.'
               : official.estado === 'PENDIENTE' ? 'La información oficial de esta amenaza todavía no se ha consultado.'
                 : official.mensaje ?? 'La información oficial no está disponible.'}
-            {' '}No se muestra descripción ni referencias.
           </p>}
         </div>
-      </section>
+      </section>}
 
       <section className="threat-detail-block" aria-labelledby="threat-observed-title">
         <header className="device-status-header">
@@ -137,10 +136,7 @@ export default function ThreatProfile() {
               <div><dt>Categoría según el log</dt><dd>{observed.categoria_log ?? unavailable}</dd></div>
               {observed.nombres_distintos > 1 && <div><dt>Nombre</dt><dd>Los logs registran {observed.nombres_distintos} nombres distintos para este ThreatID; se muestra uno de ellos.</dd></div>}
             </dl>
-            <p className="threat-severity-note">
-              Datos de los eventos THREAT que SIALU recibió del firewall; el nombre y la categoría vienen del log, no de una fuente oficial.
-              {!canQuery && ' La consulta de eventos individuales está disponible para administradores.'}
-            </p>
+            {!canQuery && <p className="threat-severity-note">La consulta de eventos individuales está disponible para administradores.</p>}
           </div>
         </>}
       </section>
